@@ -21,6 +21,9 @@ def funnel_chart(data: dict) -> None:
     # Calculate percentages for labels
     total = data.get("started", 1) or 1
     
+    # Lavender Theme Colors (Light to Dark Purple)
+    colors = ["#F3E8FF", "#E9D5FF", "#D8B4FE", "#C084FC", "#A855F7"]
+    
     ui.echart({
         "tooltip": {
             "trigger": "item",
@@ -29,7 +32,7 @@ def funnel_chart(data: dict) -> None:
         "series": [{
             "type": "funnel",
             "left": "10%",
-            "top": 40,
+            "top": 20,
             "bottom": 20,
             "width": "80%",
             "min": 0,
@@ -41,21 +44,25 @@ def funnel_chart(data: dict) -> None:
             "label": {
                 "show": True,
                 "position": "inside",
-                "formatter": "{b}\n{c}"
-            },
-            "labelLine": {
-                "show": False
+                "formatter": "{b}\n{c}",
+                "color": "#1f2937" 
             },
             "itemStyle": {
-                "borderColor": "#1a1a2e",
-                "borderWidth": 1
+                "borderColor": "#ffffff",
+                "borderWidth": 2
             },
             "emphasis": {
                 "label": {
-                    "fontSize": 14
+                    "fontSize": 14,
+                    "fontWeight": "bold"
+                },
+                "itemStyle": {
+                    "shadowBlur": 10,
+                    "shadowOffsetX": 0,
+                    "shadowColor": "rgba(0, 0, 0, 0.5)"
                 }
             },
             "data": stages,
-            "color": ["#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe"]
+            "color": colors
         }]
     }).classes("w-full h-80")

@@ -4,49 +4,57 @@ from nicegui import ui, app
 
 
 def create_sidebar() -> ui.left_drawer:
-    """
-    Create navigation sidebar.
-    Returns the drawer element for toggle control.
-    """
+    """Create navigation sidebar. Returns the drawer element for toggle control."""
     
-    with ui.left_drawer(value=True).classes("bg-dark") as drawer:
-        # Logo section
-        with ui.column().classes("w-full items-center py-4"):
-            ui.icon("smart_toy", size="48px").classes("text-primary")
-            ui.label("Agent P").classes("text-h6 text-white")
+    # Keep sidebar dark for consistent contrast
+    with ui.left_drawer(value=True).classes("bg-gray-900 border-r border-gray-800") as drawer:
+        # Logo section with refined styling
+        with ui.column().classes("w-full items-center py-8"):
+            ui.label("AMICA").style(
+                "font-family: 'Outfit', sans-serif; letter-spacing: 3px; font-weight: 300;"
+            ).classes("text-4xl text-white")
+            ui.label("Dashboard").style(
+                "font-family: 'Outfit', sans-serif; letter-spacing: 4px;"
+            ).classes("text-xs text-gray-500 uppercase mt-2")
         
-        ui.separator()
+        # Elegant divider with champagne accent
+        with ui.row().classes("w-full px-6 mb-6"):
+            ui.element("div").classes("flex-1 h-px bg-gradient-to-r from-transparent via-amber-200/30 to-transparent")
         
-        # Menu items
+        # Menu items with refined typography
         menu_items = [
-            ("/overview", "📈 Обзор", "dashboard"),
-            ("/sessions", "💬 Диалоги", "chat"),
-            ("/wishlist", "📋 Wishlist", "list"),
+            ("/overview", "Обзор", "dashboard"),
+            ("/sessions", "Диалоги", "forum"),
+            ("/wishlist", "Wishlist", "favorite_border"),
         ]
         
-        # Settings for super_admin and owner only
+        # Super admin users management
         user_role = app.storage.user.get("role", "")
+        if user_role == "super_admin":
+            menu_items.append(("/users", "Сотрудники", "people"))
+
+        # Settings for super_admin and owner only
         if user_role in ("super_admin", "owner"):
-            menu_items.append(("/settings", "⚙️ Настройки", "settings"))
+            menu_items.append(("/settings", "Настройки", "tune"))
         
-        with ui.column().classes("w-full gap-1 p-2"):
+        with ui.column().classes("w-full gap-2 px-4"):
             for path, label, icon in menu_items:
-                ui.button(
-                    label,
-                    icon=icon,
-                    on_click=lambda p=path: ui.navigate.to(p)
-                ).classes("w-full justify-start").props("flat color=white")
+                with ui.button(on_click=lambda p=path: ui.navigate.to(p)).classes(
+                    "w-full justify-start py-3 px-4 rounded-xl "
+                    "text-gray-400 hover:text-white hover:bg-white/5 "
+                    "transition-all duration-200 group"
+                ).props("flat no-caps"):
+                    ui.icon(icon).classes(
+                        "text-xl mr-4 text-gray-500 group-hover:text-amber-200/80 transition-colors"
+                    )
+                    ui.label(label).style(
+                        "font-family: 'Outfit', sans-serif; font-weight: 400; letter-spacing: 0.5px;"
+                    ).classes("text-base")
         
-        # Spacer
         ui.space()
         
-        # User info at bottom
-        ui.separator()
-        with ui.column().classes("w-full p-2"):
-            email = app.storage.user.get("email", "")
-            role = app.storage.user.get("role", "")
-            
-            ui.label(email).classes("text-caption text-grey")
-            ui.label(role.replace("_", " ").title()).classes("text-caption text-primary")
+        # Version at bottom with subtle styling
+        with ui.column().classes("w-full p-6 items-center"):
+            ui.label("v1.0.0").style("font-family: 'Outfit', sans-serif;").classes("text-xs text-gray-700 tracking-wider")
     
     return drawer

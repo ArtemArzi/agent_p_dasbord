@@ -83,3 +83,14 @@ class Client(BaseModel):
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserCreate(BaseModel):
+    """Payload for creating a new user."""
+    email: EmailStr
+    password: str
+    role: Literal["super_admin", "admin", "owner", "staff"]
+    tenant_id: Optional[UUID] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+

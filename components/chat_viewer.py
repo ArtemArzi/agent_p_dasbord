@@ -19,23 +19,57 @@ def show_chat_dialog(session_id: str, client_name: str = "Клиент", tenant_
     
     history = get_session_history(session_id, tenant_id)
     
-    with ui.dialog() as dialog, ui.card().classes("w-[450px] max-h-[85vh] p-0"):
+    # Add CSS for chat bubbles that works in both light and dark mode
+    ui.add_head_html('''
+        <style>
+            .chat-bubble-user {
+                background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+                color: white !important;
+                border-radius: 18px 18px 4px 18px;
+            }
+            .chat-bubble-assistant {
+                background: #f3f4f6;
+                color: #1f2937 !important;
+                border-radius: 18px 18px 18px 4px;
+                border: 1px solid #e5e7eb;
+            }
+            body.body--dark .chat-bubble-assistant {
+                background: #374151 !important;
+                color: #f9fafb !important;
+                border-color: #4b5563 !important;
+            }
+            .chat-bubble-user *, .chat-bubble-assistant * {
+                color: inherit !important;
+            }
+            .chat-time-user { color: rgba(255,255,255,0.7) !important; }
+            .chat-time-assistant { color: #9ca3af !important; }
+            body.body--dark .chat-time-assistant { color: #9ca3af !important; }
+            .chat-messages-area {
+                background: #f9fafb;
+            }
+            body.body--dark .chat-messages-area {
+                background: #111827 !important;
+            }
+        </style>
+    ''')
+    
+    with ui.dialog() as dialog, ui.card().classes("w-[480px] max-h-[85vh] p-0 rounded-2xl overflow-hidden"):
         # Header - Telegram style
-        with ui.row().classes("w-full items-center justify-between bg-primary p-3"):
+        with ui.row().classes("w-full items-center justify-between lavender-header p-4"):
             with ui.row().classes("items-center gap-3"):
-                ui.avatar("👤", size="md").classes("bg-blue-600")
+                ui.avatar("person", size="md").classes("bg-white text-purple-600 font-bold shadow-sm")
                 with ui.column().classes("gap-0"):
-                    ui.label(client_name).classes("text-white font-medium")
-                    ui.label(f"{len(history)} сообщений").classes("text-white/70 text-xs")
-            ui.button(icon="close", on_click=dialog.close).props("flat round dense color=white")
+                    ui.label(client_name).classes("text-gray-800 font-bold text-base")
+                    ui.label(f"{len(history)} сообщений").classes("text-gray-600 text-xs")
+            ui.button(icon="close", on_click=dialog.close).props("flat round dense color=grey")
         
         if not history:
-            with ui.column().classes("items-center justify-center py-16"):
-                ui.icon("chat_bubble_outline").classes("text-6xl text-grey")
-                ui.label("История сообщений не найдена").classes("text-grey")
+            with ui.column().classes("items-center justify-center py-16 w-full chat-messages-area"):
+                ui.icon("chat_bubble_outline").classes("text-6xl text-gray-300 mb-4")
+                ui.label("История сообщений не найдена").classes("text-gray-400 font-medium")
         else:
-            # Messages area - Telegram style
-            with ui.scroll_area().classes("h-[400px] w-full bg-gray-900 p-4") as scroll:
+            # Messages area
+            with ui.scroll_area().classes("h-[400px] w-full p-4 chat-messages-area"):
                 for msg in history:
                     is_user = msg.get("role") == "user"
                     time_str = ""
@@ -49,28 +83,23 @@ def show_chat_dialog(session_id: str, client_name: str = "Клиент", tenant_
                     
                     # Message bubble
                     with ui.row().classes(f"w-full {'justify-end' if is_user else 'justify-start'} mb-3"):
-                        with ui.card().classes(
-                            f"max-w-[85%] p-3 {'bg-blue-600 rounded-l-2xl rounded-tr-2xl rounded-br-sm' if is_user else 'bg-gray-700 rounded-r-2xl rounded-tl-2xl rounded-bl-sm'}"
-                        ).style("box-shadow: none"):
+                        bubble_class = "chat-bubble-user" if is_user else "chat-bubble-assistant"
+                        with ui.card().classes(f"max-w-[85%] p-3 {bubble_class}").style("box-shadow: 0 2px 4px rgba(0,0,0,0.1)"):
                             with ui.column().classes("gap-1"):
                                 # Avatar and message
                                 with ui.row().classes("gap-2 items-start"):
                                     if not is_user:
-                                        ui.label("🤖").classes("text-lg")
-                                    ui.label(msg.get("message", "")).classes(
-                                        f"text-white {'text-right' if is_user else 'text-left'}"
-                                    ).style("word-break: break-word")
-                                    if is_user:
-                                        ui.label("👤").classes("text-lg")
+                                        ui.icon("smart_toy").classes("text-lg text-purple-500")
+                                    ui.label(msg.get("message", "")).style("word-break: break-word")
                                 
                                 # Time stamp
                                 if time_str:
-                                    ui.label(time_str).classes(
-                                        f"text-xs text-white/50 {'text-right' if is_user else 'text-left'}"
-                                    )
+                                    time_class = "chat-time-user" if is_user else "chat-time-assistant"
+                                    ui.label(time_str).classes(f"text-xs {time_class}")
         
         # Footer
-        with ui.row().classes("w-full justify-end p-3 bg-gray-800"):
-            ui.button("Закрыть", on_click=dialog.close).props("flat color=grey")
+        with ui.row().classes("w-full justify-end p-3 border-t").style("background: var(--card-bg); border-color: var(--card-border)"):
+            ui.button("Закрыть", on_click=dialog.close).props("unelevated rounded color=purple")
     
     dialog.open()
+

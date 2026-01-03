@@ -34,12 +34,32 @@ def get_user_by_email(email: str) -> dict | None:
     """Get user by email from dashboard.users via RPC function."""
     try:
         sb = get_supabase()
-        # Use RPC function since direct schema access via .schema() has issues
+        
+        # Use RPC function to access dashboard.users
+        # RPC must be created first! See: create_rpc_auth_function.sql
         response = sb.rpc("get_dashboard_user_by_email", {"user_email": email}).execute()
         
+        # RPC returns JSON, extract data
         return response.data
+        
     except Exception as e:
+        error_msg = str(e)
+        
+       # Check for common errors
+        if "PGRST202" in error_msg:
+            print("=" * 60)
+            print("❌ RPC FUNCTION NOT FOUND!")
+            print("=" * 60)
+            print("The function 'get_dashboard_user_by_email' doesn't exist.")
+            print("\n📝 To fix:")
+            print("1. Open Supabase → SQL Editor")
+            print("2. Run the SQL from: create_rpc_auth_function.sql")
+            print("3. Restart this dashboard")
+            print("=" * 60)
+        
         print(f"Error fetching user: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -241,6 +261,19 @@ def get_sessions(
     date_to: str | None = None,
 ) -> tuple[list[dict], int]:
     """Get sessions with filters and pagination. Returns (data, total_count)."""
+    # Validate tenant_id
+    if not tenant_id:
+        print("⚠️  WARNING: get_sessions called with empty tenant_id")
+        return [], 0
+    
+    try:
+        import uuid
+        # Ensure it's a valid UUID
+        uuid.UUID(tenant_id)
+    except (ValueError, AttributeError) as e:
+        print(f"⚠️  ERROR: Invalid tenant_id format: {tenant_id} ({e})")
+        return [], 0
+    
     try:
         sb = get_supabase()
         
@@ -261,6 +294,8 @@ def get_sessions(
         return response.data or [], response.count or 0
     except Exception as e:
         print(f"Error fetching sessions: {e}")
+        import traceback
+        traceback.print_exc()
         return [], 0
 
 
@@ -401,3 +436,102 @@ def get_wishlist_stats(tenant_id: str) -> dict:
     except Exception as e:
         print(f"Error fetching wishlist stats: {e}")
         return {"converted": 0, "cancelled": 0, "pending": 0, "total_revenue": 0.0}
+
+
+# ============================================================
+# User Management Queries (Super Admin)
+# ============================================================
+
+def get_all_users() -> list[dict]:
+    """Get all users via direct RPC call."""
+    try:
+        import httpx
+        url = f"{settings.supabase_url}/rest/v1/rpc/get_all_dashboard_users"
+        headers = {
+            "apikey": settings.supabase_service_key,
+            "Authorization": f"Bearer {settings.supabase_service_key}",
+        }
+        
+        # Use sync client
+        with httpx.Client() as client:
+            response = client.post(url, headers=headers)
+            
+        if response.status_code == 200:
+            return response.json()
+            
+        print(f"Error fetching users: {response.status_code} {response.text}")
+        return []
+        
+    except Exception as e:
+        print(f"Error fetching users: {e}")
+        return []
+
+
+def create_user(user_data: dict) -> tuple[bool, str]:
+    """Create new user via direct RPC call (bypassing SDK issues)."""
+    try:
+        from auth import hash_password 
+        import httpx
+        
+        # Prepare data
+        new_user = user_data.copy()
+        raw_password = new_user.pop("password", "")
+        if not raw_password:
+             return False, "Password is required"
+             
+        encrypted_password = hash_password(raw_password)
+        
+        # Call RPC via raw HTTP to avoid Supabase SDK parsing errors (JSON 404/200 issue)
+        url = f"{settings.supabase_url}/rest/v1/rpc/create_dashboard_user"
+        headers = {
+            "apikey": settings.supabase_service_key,
+            "Authorization": f"Bearer {settings.supabase_service_key}",
+            "Content-Type": "application/json"
+        }
+        
+        params = {
+            "p_email": new_user.get("email"),
+            "p_encrypted_password": encrypted_password,
+            "p_first_name": new_user.get("first_name"),
+            "p_last_name": new_user.get("last_name"),
+            "p_role": new_user.get("role"),
+            "p_tenant_id": new_user.get("tenant_id")
+        }
+        
+        # Use sync client since this function is sync
+        with httpx.Client() as client:
+            response = client.post(url, json=params, headers=headers)
+            
+        if response.status_code != 200:
+            return False, f"Server Error {response.status_code}: {response.text}"
+            
+        result = response.json()
+        
+        # RPC returns json object: {success: bool, message: str, id: int}
+        if result and result.get("success"):
+            return True, "User created successfully"
+            
+        return False, result.get("message", "Failed to create user")
+            
+    except Exception as e:
+        return False, f"System Error: {str(e)}"
+
+
+def delete_user(user_id: int) -> bool:
+    """Delete user via direct RPC call."""
+    try:
+        import httpx
+        url = f"{settings.supabase_url}/rest/v1/rpc/delete_dashboard_user"
+        headers = {
+            "apikey": settings.supabase_service_key,
+            "Authorization": f"Bearer {settings.supabase_service_key}",
+            "Content-Type": "application/json"
+        }
+        with httpx.Client() as client:
+            response = client.post(url, json={"p_user_id": user_id}, headers=headers)
+            
+        return response.status_code == 200 and response.json() is True
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return False
+

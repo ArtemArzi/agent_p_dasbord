@@ -34,7 +34,7 @@ agent-p-dashboard/
 │   ├── chat_viewer.py      # Dialog viewer
 │   └── funnel_chart.py     # Funnel chart
 ├── jobs/
-│   └── metrics_collector.py # Prefect flow for daily metrics
+│   └── metrics_collector.py # Daily metrics aggregation (optional for MVP, used for history)
 ├── static/
 │   └── logo.png
 ├── Dockerfile
@@ -46,7 +46,7 @@ agent-p-dashboard/
 ## Backend Responsibilities (docs/01)
 - Data Access Layer: Supabase client + queries for KPI, sessions, wishlist, clients, tenant settings.
 - Auth: bcrypt password verification, login flow, require_auth decorator.
-- Background Jobs: Prefect flow to aggregate daily metrics.
+- Background Jobs: Script `jobs/metrics_collector.py` to aggregate daily metrics (optional optimization).
 
 ## Frontend Responsibilities (docs/02)
 - NiceGUI pages: login, overview, sessions, wishlist, clients, settings.

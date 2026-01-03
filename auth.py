@@ -9,10 +9,7 @@ from models import User
 
 def hash_password(password: str) -> str:
     """Hash password with bcrypt."""
-    return bcrypt.hashpw(
-        password.encode(), 
-        bcrypt.gensalt()
-    ).decode()
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(password: str, hashed: str) -> bool:
@@ -36,7 +33,11 @@ async def authenticate(email: str, password: str) -> User | None:
     if not user_data:
         return None
     
-    if not verify_password(password, user_data.get("encrypted_password", "")):
+    stored_hash = user_data.get("encrypted_password", "")
+    if not stored_hash:
+        return None
+        
+    if not verify_password(password, stored_hash):
         return None
     
     return User(**user_data)

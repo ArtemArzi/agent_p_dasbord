@@ -4,6 +4,7 @@ from nicegui import ui, app
 from datetime import datetime
 from auth import require_auth
 from components.layout import page_layout
+from components.kpi_card import kpi_card
 from data import get_wishlist_items, update_wishlist_status, delete_wishlist_item, get_wishlist_stats
 
 
@@ -35,14 +36,34 @@ async def wishlist_page():
         except Exception:
             return dt_str[:16]
     
-    def get_status_badge(status: str) -> str:
+    def format_date(date_str: str | None) -> str:
+        """Format date from meta (YYYY-MM-DD or DD.MM) to DD.MM.YYYY."""
+        if not date_str:
+            return "—"
+        try:
+            # Try YYYY-MM-DD format first
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            return dt.strftime("%d.%m.%Y")
+        except ValueError:
+            return date_str  # Return as-is if already formatted (DD.MM)
+    
+    def format_time_preference(pref: str | None) -> str:
+        """Convert time preference to Russian."""
+        mapping = {
+            "morning": "Утро",
+            "day": "День",
+            "evening": "Вечер",
+        }
+        return mapping.get(pref, "—") if pref else "—"
+    
+    def get_status_badge(status: str) -> tuple[str, str]:
         """Get status display text."""
         mapping = {
-            "pending": "🕐 Ожидает",
-            "converted": "✅ Обработано",
-            "cancelled": "❌ Отменено",
+            "pending": ("Ожидает", "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"),
+            "converted": ("Обработано", "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"),
+            "cancelled": ("Отменено", "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"),
         }
-        return mapping.get(status, status)
+        return mapping.get(status, (status, "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"))
     
     async def refresh_table():
         """Refresh wishlist table."""
@@ -64,7 +85,8 @@ async def wishlist_page():
         if stats_label:
             stats_label.text = f"Найдено: {total} заявок"
         if page_label:
-            page_label.text = f"Страница {page_state['current'] + 1} из {total_pages}"
+            # Simple "1 / 5" style
+            page_label.text = f"{page_state['current'] + 1} / {total_pages}"
         
         if prev_btn:
             prev_btn.set_enabled(page_state["current"] > 0)
@@ -79,13 +101,14 @@ async def wishlist_page():
                     return
                 
                 # Table header
-                with ui.row().classes("w-full bg-dark py-2 px-4 rounded-t gap-4"):
-                    ui.label("Клиент").classes("w-36 font-bold")
-                    ui.label("Услуга").classes("w-40 font-bold")
-                    ui.label("Дата").classes("w-32 font-bold")
-                    ui.label("Комментарий").classes("w-48 font-bold")
-                    ui.label("Статус").classes("w-28 font-bold")
-                    ui.label("Действия").classes("w-32 font-bold")
+                with ui.row().classes("w-full bg-gray-100 dark:bg-gray-800 py-3 px-4 rounded-t-lg gap-4"):
+                    ui.label("Клиент").classes("w-32 font-semibold text-gray-600 dark:text-gray-300 text-sm")
+                    ui.label("Услуга").classes("w-44 font-semibold text-gray-600 dark:text-gray-300 text-sm")
+                    ui.label("Мастер").classes("w-24 font-semibold text-gray-600 dark:text-gray-300 text-sm")
+                    ui.label("Желаемая дата").classes("w-28 font-semibold text-gray-600 dark:text-gray-300 text-sm")
+                    ui.label("Время").classes("w-16 font-semibold text-gray-600 dark:text-gray-300 text-sm")
+                    ui.label("Статус").classes("w-24 font-semibold text-gray-600 dark:text-gray-300 text-sm")
+                    ui.label("Действия").classes("w-28 font-semibold text-gray-600 dark:text-gray-300 text-sm")
                 
                 # Table rows
                 for row in data:
@@ -94,14 +117,25 @@ async def wishlist_page():
                     client_name = client_info.get("full_name") or "—"
                     client_phone = client_info.get("phone") or "—"
                     
-                    with ui.row().classes("w-full py-2 px-4 border-b border-gray-700 gap-4 hover:bg-gray-800 items-center"):
-                        ui.label(client_name).classes("w-36")
-                        ui.label(row.get("item_id") or row.get("item_type") or "—").classes("w-40 text-grey")
-                        ui.label(format_datetime(row.get("created_at"))).classes("w-32")
-                        ui.label(row.get("comment") or "—").classes("w-48 text-grey truncate")
-                        ui.label(get_status_badge(row.get("status", ""))).classes("w-28")
+                    # Extract human-readable data from meta JSON
+                    meta = row.get("meta") or {}
+                    service_title = meta.get("service_title") or row.get("item_id") or "—"
+                    staff_name = meta.get("staff_name") or "—"
+                    preferred_date = format_date(meta.get("date"))
+                    time_pref = format_time_preference(meta.get("time_preference"))
+                    
+                    with ui.row().classes("w-full py-3 px-4 border-b border-gray-200 dark:border-gray-700 gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 items-center transition-colors"):
+                        ui.label(client_name).classes("w-32 font-medium text-gray-800 dark:text-gray-200 text-sm truncate")
+                        ui.label(service_title).classes("w-44 text-gray-800 dark:text-gray-200 text-sm truncate").tooltip(service_title)
+                        ui.label(staff_name).classes("w-24 text-gray-500 dark:text-gray-400 text-sm truncate")
+                        ui.label(preferred_date).classes("w-28 text-gray-800 dark:text-gray-200 text-sm")
+                        ui.label(time_pref).classes("w-16 text-gray-500 dark:text-gray-400 text-sm")
                         
-                        with ui.row().classes("w-32 gap-1"):
+                        # Status badge
+                        status_text, status_class = get_status_badge(row.get("status", ""))
+                        ui.label(status_text).classes(f"w-24 px-2 py-1 rounded-full text-xs font-medium text-center {status_class}")
+                        
+                        with ui.row().classes("w-28 gap-1"):
                             # Mark processed button
                             if row.get("status") == "pending":
                                 ui.button(
@@ -120,6 +154,12 @@ async def wishlist_page():
                                 icon="phone",
                                 on_click=lambda name=client_name, phone=client_phone: show_contact_dialog(name, phone)
                             ).props("flat round dense color=info").tooltip("Контакт")
+                            
+                            # Delete button
+                            ui.button(
+                                icon="delete",
+                                on_click=lambda iid=item_id: confirm_delete(iid)
+                            ).props("flat round dense color=negative").tooltip("Удалить")
     
     async def mark_processed(item_id: int):
         """Show amount input dialog and mark item as processed."""
@@ -212,6 +252,8 @@ async def wishlist_page():
     
     # KPI Cards row
     kpi_container = None
+
+
     
     async def refresh_kpi():
         """Refresh KPI cards."""
@@ -221,34 +263,35 @@ async def wishlist_page():
         stats = get_wishlist_stats(tenant_id)
         kpi_container.clear()
         with kpi_container:
-            with ui.card().classes("bg-green-900 p-4"):
-                ui.label("💰 Заработано").classes("text-grey text-sm")
-                ui.label(f"{stats['total_revenue']:,.0f} ₽").classes("text-2xl font-bold text-green-400")
-            with ui.card().classes("bg-blue-900 p-4"):
-                ui.label("✅ Конвертировано").classes("text-grey text-sm")
-                ui.label(f"{stats['converted']}").classes("text-2xl font-bold text-blue-400")
-            with ui.card().classes("bg-orange-900 p-4"):
-                ui.label("🕐 Ожидают").classes("text-grey text-sm")
-                ui.label(f"{stats['pending']}").classes("text-2xl font-bold text-orange-400")
-            with ui.card().classes("bg-red-900 p-4"):
-                ui.label("❌ Отменено").classes("text-grey text-sm")
-                ui.label(f"{stats['cancelled']}").classes("text-2xl font-bold text-red-400")
+            kpi_card("Ожидают", f"{stats['pending']}", "hourglass_empty")
+            kpi_card("Заработано", f"{stats['total_revenue']:,.0f} ₽", "payments")
+            kpi_card("Обработано", f"{stats['converted']}", "check_circle")
+            kpi_card("Отменено", f"{stats['cancelled']}", "cancel")
     
     # Build UI
-    with page_layout("📋 Wishlist"):
+    with page_layout("Wishlist"):
         
-        # KPI Cards
-        kpi_container = ui.row().classes("w-full gap-4 mb-6")
+        # KPI Cards (Grid layout)
+        kpi_container = ui.element('div').classes("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full mb-6")
         
         # Filters row
-        with ui.row().classes("w-full gap-4 mb-4 items-center"):
+        with ui.row().classes("w-full items-center gap-4 mb-6 p-4 rounded-xl shadow-sm theme-card"):
+            ui.icon("filter_list").classes("text-gray-500 dark:text-gray-400")
+            
             status_select = ui.select(
-                {"pending": "🕐 Ожидают", "converted": "✅ Обработаны", "cancelled": "❌ Отменены", "all": "Все"},
+                {
+                    "pending": "Ожидает", 
+                    "converted": "Обработано", 
+                    "cancelled": "Отменено",
+                    "all": "Все"
+                },
                 value="pending",
                 label="Статус"
-            ).classes("w-48")
+            ).classes("w-40").props("outlined dense color=purple options-dense")
             
-            ui.button("Обновить", icon="refresh", on_click=refresh_table).props("flat")
+            ui.space()
+            
+            ui.button(icon="refresh", on_click=refresh_table).props("flat round color=purple").tooltip("Обновить таблицу")
         
         # Stats row
         stats_label = ui.label().classes("text-grey mb-2")
@@ -257,10 +300,10 @@ async def wishlist_page():
         table_container = ui.column().classes("w-full")
         
         # Pagination
-        with ui.row().classes("w-full justify-center gap-2 mt-4"):
-            prev_btn = ui.button("← Назад", on_click=lambda: go_page(-1)).props("flat")
-            page_label = ui.label()
-            next_btn = ui.button("Вперёд →", on_click=lambda: go_page(1)).props("flat")
+        with ui.row().classes("w-full justify-center items-center gap-4 mt-6"):
+            prev_btn = ui.button(icon="chevron_left", on_click=lambda: go_page(-1)).props("round flat color=grey-7").classes("dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700")
+            page_label = ui.label().classes("text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-[3rem] text-center")
+            next_btn = ui.button(icon="chevron_right", on_click=lambda: go_page(1)).props("round flat color=grey-7").classes("dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700")
         
         # Bind status filter
         status_select.on_value_change(refresh_table)

@@ -2,6 +2,7 @@
 
 from nicegui import ui, app
 from datetime import date, timedelta
+
 from auth import require_auth
 from components.layout import page_layout
 from components.kpi_card import kpi_card
@@ -15,6 +16,10 @@ async def overview_page():
     """Overview page with KPIs and conversion funnel."""
     
     tenant_id = app.storage.user.get("tenant_id")
+    
+    # Inject locale for this page (can also be global, but page-scope is safer for hot reload)
+    from components.common import RU_LOCALE
+    ui.add_body_html(f"<script> const ru_locale = {RU_LOCALE}; </script>")
     
     # UI element references
     date_from_input = None
@@ -69,34 +74,48 @@ async def overview_page():
             date_to_input.value = today.isoformat()
     
     # Build UI
-    with page_layout("📈 Обзор"):
+    with page_layout("Обзор"):
         
-        # Date range selector
-        with ui.row().classes("w-full items-end gap-4 mb-4"):
-            date_from_input = ui.input(
-                "С даты",
-                value=(date.today() - timedelta(days=7)).isoformat()
-            ).classes("w-40").props("type=date")
+        # Date range selector (Initialized with values)
+        today = date.today()
+        default_from = (today - timedelta(days=7)).isoformat()
+        default_to = today.isoformat()
+        
+        with ui.row().classes("w-full items-center gap-4 mb-6 p-4 rounded-xl shadow-sm theme-card"):
+            with ui.row().classes("items-center gap-2"):
+                ui.icon("calendar_today").classes("text-gray-500 dark:text-gray-400")
+                
+                with ui.input("С даты", value=default_from).classes("w-36").props("outlined dense color=purple") as date_from_input:
+                    with ui.menu().props("no-parent-event") as menu_from:
+                        ui.date().bind_value(date_from_input).props("minimal color=purple :locale='ru_locale'").on("input", menu_from.close).classes("w-64")
+                    with date_from_input.add_slot("append"):
+                        ui.icon("edit_calendar").on("click", menu_from.open).classes("cursor-pointer text-gray-500 hover:text-purple-600 transition-colors")
+                
+                ui.label("-").classes("text-gray-400")
+                
+                with ui.input("По дату", value=default_to).classes("w-36").props("outlined dense color=purple") as date_to_input:
+                    with ui.menu().props("no-parent-event") as menu_to:
+                        ui.date().bind_value(date_to_input).props("minimal color=purple :locale='ru_locale'").on("input", menu_to.close).classes("w-64")
+                    with date_to_input.add_slot("append"):
+                        ui.icon("edit_calendar").on("click", menu_to.open).classes("cursor-pointer text-gray-500 hover:text-purple-600 transition-colors")
+                
+                ui.button(icon="search", on_click=refresh_data).props("flat round color=purple").tooltip("Применить")
             
-            date_to_input = ui.input(
-                "По дату",
-                value=date.today().isoformat()
-            ).classes("w-40").props("type=date")
+            ui.separator().props("vertical").classes("mx-2 hidden sm:block")
             
             # Quick preset buttons
-            ui.button("Сегодня", on_click=lambda: set_preset(0)).props("flat dense")
-            ui.button("Вчера", on_click=lambda: set_preset(1)).props("flat dense")
-            ui.button("Неделя", on_click=lambda: set_preset(7)).props("flat dense")
-            ui.button("Месяц", on_click=lambda: set_preset(30)).props("flat dense")
-            
-            ui.button("Применить", icon="search", on_click=refresh_data).props("color=primary")
+            with ui.row().classes("gap-2"):
+                ui.button("Сегодня", on_click=lambda: set_preset(0)).props("unelevated dense rounded color=purple-1 text-color=purple-8").classes("dark:bg-purple-900/30 dark:text-purple-300 font-medium")
+                ui.button("Вчера", on_click=lambda: set_preset(1)).props("unelevated dense rounded color=purple-1 text-color=purple-8").classes("dark:bg-purple-900/30 dark:text-purple-300 font-medium")
+                ui.button("Неделя", on_click=lambda: set_preset(7)).props("unelevated dense rounded color=purple-1 text-color=purple-8").classes("dark:bg-purple-900/30 dark:text-purple-300 font-medium")
+                ui.button("Месяц", on_click=lambda: set_preset(30)).props("unelevated dense rounded color=purple-1 text-color=purple-8").classes("dark:bg-purple-900/30 dark:text-purple-300 font-medium")
         
-        # KPI Cards container
-        kpi_row = ui.row().classes("w-full gap-4 mb-6")
+        # KPI Cards container (Grid layout)
+        kpi_row = ui.element('div').classes("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full mb-6")
         
         # Funnel Chart container
-        with ui.card().classes("w-full"):
-            ui.label("Воронка конверсии").classes("text-h6 mb-2")
+        with ui.card().classes("w-full p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"):
+            ui.label("Воронка конверсии").classes("text-lg font-semibold mb-4 text-gray-800 dark:text-white")
             funnel_container = ui.column().classes("w-full")
         
         # Initial load
