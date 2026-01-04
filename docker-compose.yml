@@ -1,5 +1,7 @@
 version: '3.8'
 
+# Development compose: uses bind mounts and DEBUG=true.
+
 services:
   dashboard:
     build: .

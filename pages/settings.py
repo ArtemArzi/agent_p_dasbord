@@ -15,7 +15,7 @@ async def settings_page():
     tenant_id = app.storage.user.get("tenant_id")
     
     # Access control
-    if user_role not in ("super_admin", "owner", "admin"):
+    if user_role not in ("super_admin", "admin"):
         ui.label("Доступ запрещен").classes("text-h4 text-red")
         return
     

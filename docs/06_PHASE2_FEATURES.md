@@ -251,7 +251,8 @@ async def collect_for_tenant(tenant_id: str, target_date: date):
         "dialogs_started": total,
         "bookings": booked,
         "conversion": round(booked / total * 100, 2) if total else 0,
-    }, on_conflict="tenant_id,day").execute()
+        "avg_response_ms": 0,
+    }, on_conflict="tenant_id, day").execute()
 ```
 
 ### Расписание

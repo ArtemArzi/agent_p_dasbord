@@ -44,8 +44,7 @@ async def login_page():
             with ui.column().classes("w-full gap-5"):
                 email = ui.input(
                     "Email", 
-                    placeholder="name@example.com", 
-                    value="test.superadmin@example.com"
+                    placeholder="name@example.com"
                 ).classes("w-full").props("outlined dark dense color=white bg-color=transparent input-class=text-white label-color=purple-200").style("font-size: 16px")
                 
                 context = {

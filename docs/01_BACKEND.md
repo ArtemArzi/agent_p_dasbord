@@ -90,14 +90,12 @@ class User(BaseModel):
 ```python
 class DailyMetrics(BaseModel):
     """Дневные метрики для Overview page"""
-    date: date
+    day: date
     tenant_id: UUID
-    total_sessions: int = 0
-    total_bookings: int = 0
-    total_revenue: float = 0.0
-    conversion_rate: float = 0.0
-    top_services: list[dict] = []
-    top_staff: list[dict] = []
+    dialogs_started: int = 0
+    bookings: int = 0
+    conversion: float = 0.0
+    avg_response_ms: int = 0
 ```
 
 ### 4.3 Session (Conversation)
@@ -201,7 +199,7 @@ async def get_daily_metrics(
     """Получить метрики за период"""
     sb = get_supabase()
     
-    response = sb.table("metrics_dailies") \
+    response = sb.schema("dashboard").table("metrics_dailies") \
         .select("*") \
         .eq("tenant_id", tenant_id) \
         .gte("day", start_date.isoformat()) \
@@ -489,7 +487,6 @@ async def collect_metrics_for_tenant(tenant_id: str, target_date: date):
     
     total_sessions = sessions.count or 0
     total_bookings = bookings.count or 0
-    total_revenue = sum(b.get("booking_amount", 0) or 0 for b in bookings.data)
     conversion = (total_bookings / total_sessions * 100) if total_sessions > 0 else 0
     
     # 3. Upsert в dashboard.metrics_dailies
@@ -500,7 +497,8 @@ async def collect_metrics_for_tenant(tenant_id: str, target_date: date):
             "dialogs_started": total_sessions,
             "bookings": total_bookings,
             "conversion": round(conversion, 2),
-        }, on_conflict="tenant_id,day") \
+            "avg_response_ms": 0,
+        }, on_conflict="tenant_id, day") \
         .execute()
     
     logger.info(f"Collected metrics for {tenant_id}: {total_sessions} sessions, {total_bookings} bookings")
@@ -550,6 +548,18 @@ async def collect_daily_metrics(target_date: date | None = None):
 - [ ] Queries для клиентов с LTM
 - [ ] Queries для tenant settings
 - [ ] Realtime subscriptions (Supabase)
+
+---
+
+## 8.1 Deploy readiness checklist
+
+- [ ] RPC функции применены (`db/rpc_user_management.sql`)
+- [ ] Схема `dashboard.metrics_dailies` совпадает с кодом коллектора
+- [ ] `DEBUG=false` в проде, hot-reload выключен
+- [ ] `APP_SECRET` задан (минимум 32 символа)
+- [ ] `SUPABASE_SERVICE_KEY` задан и при необходимости ротирован
+- [ ] Docker build использует `.dockerignore`, прод-конфиг — `docker-compose.prod.yml`
+- [ ] `jobs/metrics_collector.py` протестирован в staging
 
 ---
 

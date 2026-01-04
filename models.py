@@ -22,11 +22,12 @@ class User(BaseModel):
 
 class DailyMetrics(BaseModel):
     """Daily metrics for Overview page."""
-    date: date
+    day: date
     tenant_id: UUID
-    total_sessions: int = 0
-    total_bookings: int = 0
-    conversion_rate: float = 0.0
+    dialogs_started: int = 0
+    bookings: int = 0
+    conversion: float = 0.0
+    avg_response_ms: int = 0
 
 
 class ConversationSession(BaseModel):
@@ -89,7 +90,7 @@ class UserCreate(BaseModel):
     """Payload for creating a new user."""
     email: EmailStr
     password: str
-    role: Literal["super_admin", "admin", "owner", "staff"]
+    role: Literal["super_admin", "admin", "staff"]
     tenant_id: Optional[UUID] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None

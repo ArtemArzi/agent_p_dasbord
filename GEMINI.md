@@ -26,7 +26,7 @@ agent-p-dashboard/
 │   ├── sessions.py         # Dialog sessions
 │   ├── wishlist.py         # Wishlist management
 │   ├── clients.py          # Client list (Phase 2 polish)
-│   └── settings.py         # Tenant settings (admin/owner/super_admin)
+│   └── settings.py         # Tenant settings (admin/super_admin)
 ├── components/
 │   ├── layout.py           # Shared layout + tenant selector
 │   ├── sidebar.py          # Navigation drawer
@@ -79,7 +79,7 @@ Key public tables:
 - user_ltm_v2 (preferences)
 
 Key dashboard tables:
-- users (roles: super_admin, admin, owner, staff)
+- users (roles: super_admin, admin, staff)
 - metrics_dailies (daily KPI)
 - alerts, audits, conversations, bookings
 

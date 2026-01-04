@@ -14,7 +14,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import get_supabase, get_kpi_summary
-from models import DailyMetrics
 
 async def collect_metrics_for_tenant(tenant_id: str, target_date: date):
     """Calculate and save metrics for a single tenant."""
@@ -30,19 +29,19 @@ async def collect_metrics_for_tenant(tenant_id: str, target_date: date):
         
         # Prepare data for insertion
         metric_data = {
-            "date": date_str,
+            "day": date_str,
             "tenant_id": tenant_id,
-            "total_sessions": kpi["sessions"],
-            "total_bookings": kpi["bookings"],
-            "revenue": kpi["revenue"],
-            "conversion_rate": kpi["conversion"],
+            "dialogs_started": kpi["sessions"],
+            "bookings": kpi["bookings"],
+            "conversion": kpi["conversion"],
+            "avg_response_ms": 0,
             "updated_at": datetime.utcnow().isoformat()
         }
         
         # Upsert into metrics_dailies
-        # Assuming there is a unique constraint on (tenant_id, date)
-        result = sb.table("metrics_dailies") \
-            .upsert(metric_data, on_conflict="tenant_id, date") \
+        # Assuming there is a unique constraint on (tenant_id, day)
+        result = sb.schema("dashboard").table("metrics_dailies") \
+            .upsert(metric_data, on_conflict="tenant_id, day") \
             .execute()
         
         print(f"✅ Saved metrics for tenant {tenant_id}: {metric_data}")

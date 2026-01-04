@@ -63,3 +63,20 @@ BEGIN
     RETURN FOUND;
 END;
 $$;
+
+-- 4. Get User By Email
+CREATE OR REPLACE FUNCTION public.get_dashboard_user_by_email(user_email text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN (
+        SELECT row_to_json(u)
+        FROM dashboard.users u
+        WHERE u.email = user_email
+        AND u.active = true
+        LIMIT 1
+    );
+END;
+$$;

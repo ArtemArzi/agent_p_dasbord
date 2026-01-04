@@ -33,8 +33,8 @@ def create_sidebar() -> ui.left_drawer:
         if user_role == "super_admin":
             menu_items.append(("/users", "Сотрудники", "people"))
 
-        # Settings for super_admin and owner only
-        if user_role in ("super_admin", "owner"):
+        # Settings for super_admin and admin only
+        if user_role in ("super_admin", "admin"):
             menu_items.append(("/settings", "Настройки", "tune"))
         
         with ui.column().classes("w-full gap-2 px-4"):

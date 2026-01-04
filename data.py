@@ -12,12 +12,12 @@ def get_supabase() -> Client:
     global _supabase
     if _supabase is None:
         # Debug: check if service key is being used (not anon)
-        key = settings.supabase_service_key
-        if "service_role" not in key:
-            print("⚠️  WARNING: SUPABASE_SERVICE_KEY may be anon key, not service_role!")
-            print(f"   Key preview: {key[:50]}...")
-        else:
-            print("✅ Using service_role key")
+        if settings.debug:
+            key = settings.supabase_service_key
+            if "service_role" not in key:
+                print("⚠️  WARNING: SUPABASE_SERVICE_KEY may be anon key, not service_role!")
+            else:
+                print("✅ Using service_role key")
         
         _supabase = create_client(
             settings.supabase_url,
@@ -36,7 +36,7 @@ def get_user_by_email(email: str) -> dict | None:
         sb = get_supabase()
         
         # Use RPC function to access dashboard.users
-        # RPC must be created first! See: create_rpc_auth_function.sql
+        # RPC must be created first! See: db/rpc_user_management.sql
         response = sb.rpc("get_dashboard_user_by_email", {"user_email": email}).execute()
         
         # RPC returns JSON, extract data
@@ -53,7 +53,7 @@ def get_user_by_email(email: str) -> dict | None:
             print("The function 'get_dashboard_user_by_email' doesn't exist.")
             print("\n📝 To fix:")
             print("1. Open Supabase → SQL Editor")
-            print("2. Run the SQL from: create_rpc_auth_function.sql")
+            print("2. Run the SQL from: db/rpc_user_management.sql")
             print("3. Restart this dashboard")
             print("=" * 60)
         
@@ -72,9 +72,11 @@ def get_tenants() -> list[dict]:
     """
     try:
         sb = get_supabase()
-        print(f"DEBUG get_tenants: calling supabase...")
+        if settings.debug:
+            print("DEBUG get_tenants: calling supabase...")
         response = sb.table("tenants_v2").select("id, name").order("name").execute()
-        print(f"DEBUG get_tenants: response.data = {response.data}")
+        if settings.debug:
+            print(f"DEBUG get_tenants: response.data = {response.data}")
         return response.data or []
     except Exception as e:
         print(f"Error fetching tenants: {e}")
@@ -86,14 +88,16 @@ def get_tenants() -> list[dict]:
 def get_tenant_settings(tenant_id: str) -> dict | None:
     """Get tenant with full metadata for settings page."""
     try:
-        print(f"DEBUG get_tenant_settings: tenant_id = {tenant_id}")
+        if settings.debug:
+            print(f"DEBUG get_tenant_settings: tenant_id = {tenant_id}")
         sb = get_supabase()
         response = sb.table("tenants_v2") \
             .select("*") \
             .eq("id", tenant_id) \
             .single() \
             .execute()
-        print(f"DEBUG get_tenant_settings: response.data = {response.data is not None}")
+        if settings.debug:
+            print(f"DEBUG get_tenant_settings: response.data = {response.data is not None}")
         return response.data
     except Exception as e:
         print(f"Error fetching tenant settings: {e}")
