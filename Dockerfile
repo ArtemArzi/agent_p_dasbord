@@ -21,6 +21,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application with correct ownership
 COPY --chown=appuser:appuser . .
 
+# Create NiceGUI storage directory with correct permissions
+RUN mkdir -p /app/.nicegui && chown -R appuser:appuser /app/.nicegui
+
 # Switch to non-root user
 USER appuser
 
