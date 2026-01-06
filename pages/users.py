@@ -18,10 +18,10 @@ async def users_page():
             return
             
         data = {
-            "email": email.value,
+            "email": email.value.strip(),
             "password": password.value, # Will be hashed in data.py
-            "first_name": first_name.value,
-            "last_name": last_name.value,
+            "first_name": first_name.value.strip(),
+            "last_name": last_name.value.strip() if last_name.value else "",
             "role": role.value,
             "active": True
         }
