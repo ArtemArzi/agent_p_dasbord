@@ -28,18 +28,30 @@ async def authenticate(email: str, password: str) -> User | None:
     Authenticate user by email and password.
     Returns User object if successful, None otherwise.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"[AUTH] Attempting login for email: {email}")
+    
     user_data = get_user_by_email(email)
     
     if not user_data:
+        logger.warning(f"[AUTH] User not found: {email}")
         return None
+    
+    logger.info(f"[AUTH] User found: {user_data.get('email')}, role: {user_data.get('role')}")
     
     stored_hash = user_data.get("encrypted_password", "")
     if not stored_hash:
-        return None
-        
-    if not verify_password(password, stored_hash):
+        logger.warning(f"[AUTH] No password hash for user: {email}")
         return None
     
+    logger.info(f"[AUTH] Verifying password for: {email}")
+    if not verify_password(password, stored_hash):
+        logger.warning(f"[AUTH] Password mismatch for: {email}")
+        return None
+    
+    logger.info(f"[AUTH] Login successful for: {email}")
     return User(**user_data)
 
 
